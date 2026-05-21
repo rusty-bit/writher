@@ -5,6 +5,7 @@ import os
 import sqlite3
 import threading
 from datetime import datetime, timedelta
+import locales
 from paths import DB_PATH
 
 _lock = threading.Lock()
@@ -162,6 +163,24 @@ def find_list_by_title(title: str) -> dict | None:
     return None
 
 
+def find_note_by_keyword(keyword: str) -> dict | None:
+    """Find a note by fuzzy title/content match. Returns dict or None."""
+    target = keyword.strip().lower()
+    if not target:
+        return None
+    keyword_pattern = f"%{target}%"
+    with _lock:
+        c = _conn()
+        row = c.execute(
+            "SELECT * FROM notes"
+            " WHERE lower(title) LIKE ? OR lower(content) LIKE ?"
+            " ORDER BY updated_at DESC",
+            (keyword_pattern, keyword_pattern),
+        ).fetchone()
+        c.close()
+    return dict(row) if row else None
+
+
 def get_all_notes() -> list[dict]:
     with _lock:
         c = _conn()
@@ -170,12 +189,21 @@ def get_all_notes() -> list[dict]:
     return [dict(r) for r in rows]
 
 
-def delete_note(note_id: int):
+def delete_note(note_id: int | str, confirmed: bool = False):
+    if isinstance(note_id, str):
+        note = find_note_by_keyword(note_id)
+        if not note:
+            return locales.get("note_not_found", keyword=note_id)
+        if confirmed is not True:
+            return f"__confirm_delete__:note:{note['id']}"
+        note_id = note["id"]
+
     with _lock:
         c = _conn()
         c.execute("DELETE FROM notes WHERE id=?", (note_id,))
         c.commit()
         c.close()
+    return locales.get("note_deleted")
 
 
 # ── Appointments ──────────────────────────────────────────────────────────

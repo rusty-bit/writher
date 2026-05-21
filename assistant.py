@@ -71,6 +71,22 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "delete_note",
+            "description": "Delete a saved note, found by keyword.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "keyword": {"type": "string", "description": "Keyword from the note title or content"},
+                    "confirmed": {"type": "boolean", "description": "True only after the user confirmed deletion",
+                                  "default": False},
+                },
+                "required": ["keyword"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "create_appointment",
             "description": "Create a calendar appointment with date and time.",
             "parameters": {
@@ -238,6 +254,9 @@ def _dispatch(fc: dict) -> str:
                 return locales.get("added_to_list", title=existing["title"])
             else:
                 return locales.get("list_not_found", title=args.get("list_title", ""))
+
+        elif name == "delete_note":
+            return db.delete_note(args.get("keyword", ""), args.get("confirmed", False))
 
         elif name == "create_appointment":
             aid = db.create_appointment(
