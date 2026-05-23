@@ -103,6 +103,22 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "delete_reminder",
+            "description": "Delete a saved reminder, found by keyword.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "keyword": {"type": "string", "description": "Keyword from the reminder message"},
+                    "confirmed": {"type": "boolean", "description": "True only after the user confirmed deletion",
+                                  "default": False},
+                },
+                "required": ["keyword"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "create_appointment",
             "description": "Create a calendar appointment with date and time.",
             "parameters": {
@@ -294,6 +310,18 @@ def _dispatch(fc: dict) -> str:
             aid = appointment["id"]
             db.delete_appointment(aid)
             return locales.get("appointment_deleted", title=title, aid=aid)
+
+        elif name == "delete_reminder":
+            keyword = args.get("keyword", "")
+            reminder = db.find_reminder_by_keyword(keyword)
+            if not reminder:
+                return locales.get("reminder_not_found", keyword=keyword)
+            if args.get("confirmed", False) is not True:
+                return f"__confirm_delete__:reminder:{reminder['id']}"
+            message = reminder["message"]
+            rid = reminder["id"]
+            db.delete_reminder(rid)
+            return locales.get("reminder_deleted", message=message, rid=rid)
         
         elif name == "create_appointment":
             aid = db.create_appointment(

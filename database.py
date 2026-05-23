@@ -328,6 +328,24 @@ def get_pending_reminders() -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def find_reminder_by_keyword(keyword: str) -> dict | None:
+    """Find a reminder by fuzzy message match. Returns dict or None."""
+    target = keyword.strip().lower()
+    if not target:
+        return None
+    keyword_pattern = f"%{target}%"
+    with _lock:
+        c = _conn()
+        row = c.execute(
+            "SELECT * FROM reminders"
+            " WHERE lower(message) LIKE ?"
+            " ORDER BY remind_at ASC",
+            (keyword_pattern,)
+        ).fetchone()
+        c.close()
+    return dict(row) if row else None
+
+
 def mark_reminder_notified(rid: int):
     with _lock:
         c = _conn()
