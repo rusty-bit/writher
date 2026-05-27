@@ -54,7 +54,7 @@ hotkey_listener = None
 
 _rec_start  = 0.0
 _MIN_DURATION = 0.5
-_DELETE_CONFIRM_SECONDS = 10.0
+_DELETE_CONFIRM_SECONDS = 15.0
 _DELETE_CONFIRM_TOKEN = re.compile(r"^__confirm_delete__:(note|appointment|reminder):(\d+)$")
 _pending_delete = None
 

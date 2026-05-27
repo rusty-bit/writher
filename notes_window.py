@@ -417,6 +417,15 @@ class NotesWindow:
         db.check_item(note_id, item_text)
         self._refresh()
 
+    def _delete_note(self, note_id: int):
+        note = None
+        for n in db.get_all_notes():
+            if n["id"] == note_id:
+                note = n
+                break
+        if note:
+            self._show_delete_confirmation_dialog("note", note_id, note)
+
     # ── Delete Confirmation Dialog ────────────────────────────────────────
 
     def _show_delete_confirmation_dialog(self, item_type: str, item_id: int, item_data: dict, voice_mode: bool = False, on_voice_confirm=None):
@@ -653,15 +662,6 @@ class NotesWindow:
         elif item_type == "reminder":
             db.delete_reminder(item_id)
         self._refresh()
-
-    def _delete_note(self, note_id: int):
-        note = None
-        for n in db.get_all_notes():
-            if n["id"] == note_id:
-                note = n
-                break
-        if note:
-            self._show_delete_confirmation_dialog("note", note_id, note)
 
     # ── Appointments ──────────────────────────────────────────────────────
 
