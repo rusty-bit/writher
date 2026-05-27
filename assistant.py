@@ -292,36 +292,21 @@ def _dispatch(fc: dict) -> str:
             note = db.find_note_by_keyword(keyword)
             if not note:
                 return locales.get("note_not_found", keyword=keyword)
-            if args.get("confirmed", False) is not True:
-                return f"__confirm_delete__:note:{note['id']}"
-            title = note["title"] or locales.get("default_note_title")
-            nid = note["id"]
-            db.delete_note(nid)
-            return locales.get("note_deleted", title=title, nid=nid)
+            return f"__confirm_delete__:note:{note['id']}"
 
         elif name == "delete_appointment":
             keyword = args.get("keyword", "")
             appointment = db.find_appointment_by_keyword(keyword)
             if not appointment:
                 return locales.get("appointment_not_found", keyword=keyword)
-            if args.get("confirmed", False) is not True:
-                return f"__confirm_delete__:appointment:{appointment['id']}"
-            title = appointment["title"]
-            aid = appointment["id"]
-            db.delete_appointment(aid)
-            return locales.get("appointment_deleted", title=title, aid=aid)
+            return f"__confirm_delete__:appointment:{appointment['id']}"
 
         elif name == "delete_reminder":
             keyword = args.get("keyword", "")
             reminder = db.find_reminder_by_keyword(keyword)
             if not reminder:
                 return locales.get("reminder_not_found", keyword=keyword)
-            if args.get("confirmed", False) is not True:
-                return f"__confirm_delete__:reminder:{reminder['id']}"
-            message = reminder["message"]
-            rid = reminder["id"]
-            db.delete_reminder(rid)
-            return locales.get("reminder_deleted", message=message, rid=rid)
+            return f"__confirm_delete__:reminder:{reminder['id']}"
         
         elif name == "create_appointment":
             aid = db.create_appointment(
