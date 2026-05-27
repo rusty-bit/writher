@@ -1,6 +1,7 @@
 import ctypes
 import locale
 import queue
+import re
 import threading
 import time
 import tkinter as tk
@@ -53,6 +54,9 @@ hotkey_listener = None
 
 _rec_start  = 0.0
 _MIN_DURATION = 0.5
+_DELETE_CONFIRM_SECONDS = 5.0
+_DELETE_CONFIRM_TOKEN = re.compile(r"^__confirm_delete__:(note|appointment|reminder):(\d+)$")
+_pending_delete = None
 
 # Toggle-mode timeout timers
 _dict_timeout_timer  = None
@@ -236,6 +240,111 @@ def _dictation_worker():
                 widget.hide()
 
 
+def _parse_delete_token(result: str):
+    m = _DELETE_CONFIRM_TOKEN.match(result or "")
+    if not m:
+        return None
+    return m.group(1), int(m.group(2))
+
+
+def _set_pending_delete(kind: str, item_id: int):
+    global _pending_delete
+    _pending_delete = {
+        "kind": kind,
+        "id": item_id,
+        "expires_at": time.monotonic() + _DELETE_CONFIRM_SECONDS,
+    }
+    log.info("Pending delete set: %s #%d (expires in %.1fs)", kind, item_id, _DELETE_CONFIRM_SECONDS)
+
+
+def _clear_pending_delete():
+    global _pending_delete
+    _pending_delete = None
+
+
+def _is_affirmative(text: str) -> bool:
+    t = (text or "").strip().lower()
+    if not t:
+        return False
+    return bool(re.search(r"\b(yes|yeah|yep|ok|okay|confirm|si|sì|certo|confermo)\b", t))
+
+
+def _is_negative(text: str) -> bool:
+    t = (text or "").strip().lower()
+    if not t:
+        return False
+    return bool(re.search(r"\b(no|nope|cancel|stop|annulla|annullare)\b", t))
+
+
+def _refresh_notes_window_if_open():
+    if notes_win and notes_win._win and notes_win._win.winfo_exists():
+        root.after(0, notes_win._refresh)
+
+
+def _delete_by_pending(kind: str, item_id: int) -> str:
+    if kind == "note":
+        title = locales.get("default_note_title")
+        for note in db.get_all_notes():
+            if note["id"] == item_id:
+                title = note["title"] or title
+                break
+        else:
+            return locales.get("delete_item_missing", item=locales.get("delete_item_note"))
+        db.delete_note(item_id)
+        _refresh_notes_window_if_open()
+        return locales.get("note_deleted", title=title, nid=item_id)
+
+    if kind == "appointment":
+        title = None
+        for appointment in db.get_appointments():
+            if appointment["id"] == item_id:
+                title = appointment["title"]
+                break
+        if title is None:
+            return locales.get("delete_item_missing", item=locales.get("delete_item_appointment"))
+        db.delete_appointment(item_id)
+        _refresh_notes_window_if_open()
+        return locales.get("appointment_deleted", title=title, aid=item_id)
+
+    if kind == "reminder":
+        message = None
+        for reminder in db.get_all_reminders(include_notified=True):
+            if reminder["id"] == item_id:
+                message = reminder["message"]
+                break
+        if message is None:
+            return locales.get("delete_item_missing", item=locales.get("delete_item_reminder"))
+        db.delete_reminder(item_id)
+        _refresh_notes_window_if_open()
+        return locales.get("reminder_deleted", message=message, rid=item_id)
+
+    return locales.get("error", detail=f"Unsupported delete kind: {kind}")
+
+
+def _handle_pending_delete_confirmation(text: str):
+    if _pending_delete is None:
+        return None
+
+    now = time.monotonic()
+    if now > _pending_delete["expires_at"]:
+        log.info("Pending delete expired.")
+        _clear_pending_delete()
+        return "__delete_confirm_timeout__"
+
+    if _is_affirmative(text):
+        kind = _pending_delete["kind"]
+        item_id = _pending_delete["id"]
+        _clear_pending_delete()
+        return _delete_by_pending(kind, item_id)
+
+    if _is_negative(text):
+        _clear_pending_delete()
+        return "__delete_cancelled__"
+
+    remaining = int(max(1, _pending_delete["expires_at"] - now))
+    return f"__delete_confirm_repeat__:{remaining}"
+
+
 def _assistant_worker():
     """Transcribe audio, send to Ollama, and execute the returned action."""
     while True:
@@ -252,11 +361,42 @@ def _assistant_worker():
                 continue
 
             log.info("Assistant heard: %r", text)
-            result = assistant.process(text)
+            result = _handle_pending_delete_confirmation(text)
+            if result is None:
+                result = assistant.process(text)
             log.info("Assistant result: %s", result)
 
+            token = _parse_delete_token(result)
+            if token:
+                kind, item_id = token
+                _set_pending_delete(kind, item_id)
+                if widget:
+                    widget.set_expression("listening")
+                    widget.show_message(
+                        locales.get(
+                            "delete_confirm_prompt",
+                            item=locales.get(f"delete_item_{kind}"),
+                            seconds=int(_DELETE_CONFIRM_SECONDS),
+                        ),
+                        2200,
+                    )
+                continue
+
             # Handle special show commands
-            if result == "__show_notes__":
+            if result == "__delete_confirm_timeout__":
+                if widget:
+                    widget.set_expression("sad")
+                    widget.show_message(locales.get("delete_confirm_timeout"), 2200)
+            elif result == "__delete_cancelled__":
+                if widget:
+                    widget.set_expression("sad")
+                    widget.show_message(locales.get("delete_cancelled"), 2200)
+            elif result.startswith("__delete_confirm_repeat__:"):
+                remaining = int(result.rsplit(":", 1)[1])
+                if widget:
+                    widget.set_expression("listening")
+                    widget.show_message(locales.get("delete_confirm_repeat", seconds=remaining), 2200)
+            elif result == "__show_notes__":
                 if notes_win:
                     root.after(0, lambda: notes_win.show("notes"))
                 if widget:
