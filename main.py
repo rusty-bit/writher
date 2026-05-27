@@ -262,18 +262,30 @@ def _clear_pending_delete():
     _pending_delete = None
 
 
-def _is_affirmative(text: str) -> bool:
-    t = (text or "").strip().lower()
+def _matches_locale_choice(text: str, key: str) -> bool:
+    t = " ".join((text or "").strip().lower().split())
     if not t:
         return False
-    return bool(re.search(r"\b(yes|yeah|yep|ok|okay|confirm|si|sì|certo|confermo)\b", t))
+
+    choices = [
+        " ".join(choice.strip().lower().split())
+        for choice in locales.get_choices(key)
+        if choice.strip()
+    ]
+    if not choices:
+        return False
+
+    alternatives = "|".join(re.escape(choice) for choice in choices)
+    pattern = rf"(?<!\w)(?:{alternatives})(?!\w)"
+    return bool(re.search(pattern, t))
+
+
+def _is_affirmative(text: str) -> bool:
+    return _matches_locale_choice(text, "delete_confirmations")
 
 
 def _is_negative(text: str) -> bool:
-    t = (text or "").strip().lower()
-    if not t:
-        return False
-    return bool(re.search(r"\b(no|nope|cancel|stop|annulla|annullare)\b", t))
+    return _matches_locale_choice(text, "delete_rejections")
 
 
 def _refresh_notes_window_if_open():
