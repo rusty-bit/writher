@@ -1,11 +1,13 @@
-from pynput.keyboard import Key
+from pynput.keyboard import Key, KeyCode
 
 # ── Hotkeys ───────────────────────────────────────────────────────────────
 # Hold AltGr to dictate (paste text directly)
 HOTKEY = Key.alt_gr
 
-# Hold Ctrl+R to activate assistant mode (notes, agenda, reminders)
-ASSISTANT_HOTKEY = Key.ctrl_r
+# Hold Ctrl+Alt+R to activate assistant mode (notes, agenda, reminders).
+# This is a combo hotkey: (frozenset of modifier names, trigger KeyCode).
+# Ctrl+Alt+R avoids the Ctrl+Shift+R browser-reload conflict.
+ASSISTANT_HOTKEY = (frozenset({"ctrl", "alt"}), KeyCode.from_vk(82))
 
 # ── Language ──────────────────────────────────────────────────────────────
 # Controls both Whisper transcription and all UI / assistant strings.
@@ -24,7 +26,7 @@ MIC_DEVICE_NAME = None
 
 # ── Ollama (assistant) ───────────────────────────────────────────────────
 OLLAMA_URL = "http://localhost:11434"
-OLLAMA_MODEL = "gpt-oss:20b-cloud"
+OLLAMA_MODEL = "llama3.2:3b"
 
 # ── Recording mode ────────────────────────────────────────────────────────
 # True = hold key to record (release stops).  False = toggle (press start, press stop).

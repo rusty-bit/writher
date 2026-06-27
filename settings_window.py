@@ -22,7 +22,8 @@ import config
 import database as db
 import locales
 from brand import make_title_bar_image
-from hotkey_util import key_to_str, str_to_key, key_display_name, is_blocked
+from hotkey_util import (key_to_str, str_to_key, key_display_name, is_blocked,
+                         canonical_modifier, hotkeys_equal)
 import theme as T
 
 _WIN_W, _WIN_H = 460, 580
@@ -543,25 +544,46 @@ class SettingsWindow:
     # ── Hotkey capture ────────────────────────────────────────────────────
 
     def _start_hotkey_capture(self, target: str):
-        """Enter key-capture mode for the given target ('dictation' or 'assistant')."""
+        """Enter key-capture mode for the given target ('dictation' or 'assistant').
+
+        Hold any combination of Ctrl/Shift/Alt/Win, then press the trigger key.
+        Press Escape to cancel without changing the hotkey.
+        """
         btn = self._hk_dict_btn if target == "dictation" else self._hk_assist_btn
         if not btn or not self._win:
             return
 
-        # Visual feedback: show "press a key" state
         btn.configure(
             text=locales.get("setting_hotkey_press"),
             fg_color=T.BORDER_GLOW, border_color=T.ACCENT,
         )
 
+        held_modifiers: set = set()
+
         def on_press(key):
-            # Ignore lone modifier presses that are part of combos
-            # Accept the key and stop listening
-            self._root.after(0, lambda: self._finish_hotkey_capture(target, key))
+            if key == kb.Key.esc:
+                self._root.after(0, lambda: self._reset_hotkey_btn(target))
+                return False  # cancel
+
+            mod = canonical_modifier(key)
+            if mod is not None:
+                held_modifiers.add(mod)
+                return  # keep listening — waiting for the trigger key
+
+            # Non-modifier pressed: form the hotkey and finish capture.
+            if held_modifiers:
+                hotkey = (frozenset(held_modifiers), key)
+            else:
+                hotkey = key
+            self._root.after(0, lambda: self._finish_hotkey_capture(target, hotkey))
             return False  # stop listener
 
-        # Start a temporary listener in a background thread
-        capture_listener = kb.Listener(on_press=on_press)
+        def on_release(key):
+            mod = canonical_modifier(key)
+            if mod is not None:
+                held_modifiers.discard(mod)
+
+        capture_listener = kb.Listener(on_press=on_press, on_release=on_release)
         capture_listener.start()
 
     def _finish_hotkey_capture(self, target: str, key):
@@ -582,7 +604,7 @@ class SettingsWindow:
 
         # Check for conflict with the other hotkey
         other_key = config.ASSISTANT_HOTKEY if target == "dictation" else config.HOTKEY
-        if key == other_key:
+        if hotkeys_equal(key, other_key):
             btn.configure(
                 text=locales.get("setting_hotkey_conflict"),
                 fg_color=T.RED, border_color=T.RED,

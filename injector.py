@@ -148,21 +148,16 @@ def inject(text: str):
     # Always save to recovery file — paste target may silently ignore Ctrl+V
     _save_recovery(text)
 
-    # Save current clipboard content
-    original = _get_clipboard_text()
+    if not _set_clipboard_text(text):
+        log.error("Failed to set clipboard text (already saved to recovery)")
+        return
+    time.sleep(0.05)
 
-    try:
-        if not _set_clipboard_text(text):
-            log.error("Failed to set clipboard text (already saved to recovery)")
-            return
-        time.sleep(0.05)
+    # Simulate Ctrl+V to paste into the active app.
+    # The transcribed text intentionally stays in the clipboard afterwards
+    # so the user can paste it again anywhere without re-transcribing.
+    with _keyboard.pressed(Key.ctrl):
+        _keyboard.press("v")
+        _keyboard.release("v")
 
-        # Simulate Ctrl+V to paste into the active app
-        with _keyboard.pressed(Key.ctrl):
-            _keyboard.press("v")
-            _keyboard.release("v")
-
-        time.sleep(0.10)
-    finally:
-        # Restore original clipboard
-        _set_clipboard_text(original)
+    time.sleep(0.10)

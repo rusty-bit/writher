@@ -35,6 +35,7 @@ import assistant
 import config
 import database as db
 import locales
+import ollama_manager
 from notifier import ReminderScheduler
 from notes_window import NotesWindow
 from settings_window import SettingsWindow
@@ -506,6 +507,7 @@ def _quit():
     _cancel_timeout("assistant")
     _pipeline_queue.put(_STOP)
     _assistant_queue.put(_STOP)
+    ollama_manager.stop()
     if scheduler:
         scheduler.stop()
     if hotkey_listener:
@@ -567,10 +569,28 @@ def main():
                     on_show_settings=_show_settings)
     tray.start()
 
-    # Check Ollama connectivity at startup
-    if not assistant.ping_ollama():
-        log.warning("Ollama is not reachable at %s", config.OLLAMA_URL)
-        tray.set_tooltip(locales.get("tray_ollama_down"))
+    # Start Ollama in the background — download binary + pull model if needed.
+    def _on_ollama_download(pct: float):
+        root.after(0, lambda: tray.set_tooltip(
+            f"Downloading Ollama... {int(pct * 100)}%"
+        ))
+
+    def _on_model_pull(pct, status: str):
+        label = f"{int(pct * 100)}% — {status}" if pct is not None else status
+        root.after(0, lambda: tray.set_tooltip(f"Pulling model: {label}"))
+
+    def _setup_ollama():
+        tray.set_tooltip("Starting Ollama...")
+        ollama_manager.ensure_ready(
+            on_ollama_download=_on_ollama_download,
+            on_model_pull=_on_model_pull,
+        )
+        if ollama_manager.is_ready():
+            root.after(0, lambda: tray.set_tooltip(locales.get("tray_idle")))
+        else:
+            root.after(0, lambda: tray.set_tooltip(locales.get("tray_ollama_down")))
+
+    threading.Thread(target=_setup_ollama, daemon=True).start()
 
     transcriber = Transcriber()
 
@@ -590,7 +610,7 @@ def main():
     )
     hotkey_listener.start()
 
-    log.info("Ready. AltGr=dictate, Ctrl+R=assistant.")
+    log.info("Ready. AltGr=dictate, Ctrl+Alt+R=assistant.")
     root.mainloop()
 
 
