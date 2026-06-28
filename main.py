@@ -585,14 +585,15 @@ def main():
     tray.start()
 
     # Start Ollama in the background — download binary + pull model if needed.
+    # Callbacks update only the pystray title, which is thread-safe.
+    # root.after() must NOT be called from background threads before mainloop
+    # starts because tkinter._register() requires the main Tcl thread.
     def _on_ollama_download(pct: float):
-        root.after(0, lambda: tray.set_tooltip(
-            f"Downloading Ollama... {int(pct * 100)}%"
-        ))
+        tray.set_tooltip(f"Downloading Ollama... {int(pct * 100)}%")
 
     def _on_model_pull(pct, status: str):
         label = f"{int(pct * 100)}% — {status}" if pct is not None else status
-        root.after(0, lambda: tray.set_tooltip(f"Pulling model: {label}"))
+        tray.set_tooltip(f"Pulling model: {label}")
 
     def _setup_ollama():
         tray.set_tooltip("Starting Ollama...")
@@ -600,10 +601,10 @@ def main():
             on_ollama_download=_on_ollama_download,
             on_model_pull=_on_model_pull,
         )
-        if ollama_manager.is_ready():
-            root.after(0, lambda: tray.set_tooltip(locales.get("tray_idle")))
-        else:
-            root.after(0, lambda: tray.set_tooltip(locales.get("tray_ollama_down")))
+        tray.set_tooltip(
+            locales.get("tray_idle") if ollama_manager.is_ready()
+            else locales.get("tray_ollama_down")
+        )
 
     threading.Thread(target=_setup_ollama, daemon=True).start()
 

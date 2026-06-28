@@ -33,7 +33,7 @@ _TITLE_H = 40
 _WHISPER_MODELS = ["tiny", "base", "small", "medium", "large-v3"]
 
 # Supported languages
-_LANGUAGES = [("en", "English"), ("it", "Italiano")]
+_LANGUAGES = [("en", "English"), ("it", "Italiano"), ("de", "Deutsch")]
 
 
 def _fetch_ollama_models() -> list[str]:
@@ -79,6 +79,10 @@ class SettingsWindow:
         self._hk_assist_btn = None
         self._hk_listener = None  # temporary listener for key capture
         self._hk_capturing = None  # "dictation" or "assistant" or None
+        # Log viewer
+        self._log_box = None
+        self._log_refresh_btn = None
+        self._log_refresh_job = None
         # Callbacks
         self._cb_language_change = on_language_change
         self._cb_whisper_change = on_whisper_change
@@ -357,6 +361,38 @@ class SettingsWindow:
         )
         self._lang_note.pack(fill="x")
 
+        self._build_separator(pad)
+
+        # ── 7. Log viewer ────────────────────────────────────────────
+        log_header = ctk.CTkFrame(pad, fg_color="transparent")
+        log_header.pack(fill="x", pady=(0, T.PAD_S))
+
+        ctk.CTkLabel(
+            log_header, text=locales.get("setting_log"),
+            font=T.FONT_TITLE, text_color=T.FG, anchor="w",
+        ).pack(side="left")
+
+        self._log_refresh_btn = ctk.CTkButton(
+            log_header, text="⟳", width=36, height=28,
+            fg_color=T.BG_CARD, hover_color=T.BG_HOVER,
+            border_color=T.BORDER, border_width=1,
+            text_color=T.FG, font=(T.FONT_FAMILY, 16),
+            corner_radius=6, command=self._refresh_log,
+        )
+        self._log_refresh_btn.pack(side="right")
+
+        self._log_box = ctk.CTkTextbox(
+            pad, height=180, font=("Courier New", 9),
+            fg_color=T.BG_CARD, text_color=T.FG_DIM,
+            border_color=T.BORDER, border_width=1,
+            corner_radius=6, wrap="none",
+            state="disabled",
+        )
+        self._log_box.pack(fill="x", pady=(0, T.PAD_M))
+
+        # Kick off initial load and auto-refresh
+        self._schedule_log_refresh()
+
     # ── Helpers ───────────────────────────────────────────────────────────
 
     def _build_section_label(self, parent, text: str):
@@ -380,6 +416,13 @@ class SettingsWindow:
             self._win.geometry(f"+{x}+{y}")
 
     def _close(self):
+        if self._log_refresh_job is not None:
+            try:
+                if self._win:
+                    self._win.after_cancel(self._log_refresh_job)
+            except Exception:
+                pass
+            self._log_refresh_job = None
         if self._win:
             try:
                 self._win.destroy()
@@ -642,6 +685,30 @@ class SettingsWindow:
             fg_color=T.BG_CARD, border_color=T.BORDER,
             text_color=T.FG,
         )
+
+    # ── Log viewer ────────────────────────────────────────────────────────
+
+    def _refresh_log(self):
+        if not self._log_box or not self._win:
+            return
+        try:
+            from paths import LOG_PATH
+            with open(LOG_PATH, "r", encoding="utf-8", errors="replace") as f:
+                lines = f.readlines()
+            content = "".join(lines[-80:])
+        except Exception as exc:
+            content = f"(could not read log: {exc})"
+        self._log_box.configure(state="normal")
+        self._log_box.delete("1.0", "end")
+        self._log_box.insert("end", content)
+        self._log_box.see("end")
+        self._log_box.configure(state="disabled")
+
+    def _schedule_log_refresh(self):
+        if not self._win or not self._win.winfo_exists():
+            return
+        self._refresh_log()
+        self._log_refresh_job = self._win.after(2000, self._schedule_log_refresh)
 
     # ── Microphone helpers ────────────────────────────────────────────────
 

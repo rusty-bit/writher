@@ -125,6 +125,9 @@ _STRINGS: dict[str, dict[str, LocaleValue]] = {
         "setting_hotkey_assistant": "Assistant",
         "setting_hotkey_press":     "Press a key...",
         "setting_hotkey_conflict":  "Already in use",
+
+        # settings_window.py — log viewer
+        "setting_log":              "Log",
     },
 
     "it": {
@@ -232,6 +235,114 @@ _STRINGS: dict[str, dict[str, LocaleValue]] = {
         "setting_hotkey_assistant": "Assistente",
         "setting_hotkey_press":     "Premi un tasto...",
         "setting_hotkey_conflict":  "Già in uso",
+
+        # settings_window.py — log viewer
+        "setting_log":              "Log",
+    },
+
+    "de": {
+        "note_saved":           "Notiz gespeichert (#{nid})",
+        "list_saved":           "Liste '{title}' gespeichert ({count} Einträge)",
+        "added_to_list":        "Zu '{title}' hinzugefügt",
+        "list_not_found":       "Liste '{title}' nicht gefunden",
+        "note_not_found":       "Notiz mit '{keyword}' nicht gefunden",
+        "note_deleted":         "Notiz '{title}' gelöscht (#{nid})",
+        "appointment_created":  "Termin erstellt: {title} ({dt})",
+        "appointment_not_found": "Termin mit '{keyword}' nicht gefunden",
+        "appointment_deleted":   "Termin '{title}' gelöscht (#{aid})",
+        "reminder_not_found":   "Erinnerung mit '{keyword}' nicht gefunden",
+        "reminder_deleted":     "Erinnerung '{message}' gelöscht (#{rid})",
+        "reminder_set":         "Erinnerung gesetzt: {dt}",
+        "delete_confirm_prompt": "Sagen Sie ja innerhalb von {seconds}s, um dieses {item} zu löschen",
+        "delete_confirm_repeat": "Bitte sagen Sie ja oder nein ({seconds}s verbleiben)",
+        "delete_confirm_timeout": "Löschbestätigung abgelaufen",
+        "delete_cancelled":      "Löschen abgebrochen",
+        "delete_item_missing":   "{item} wurde nicht gefunden",
+        "delete_item_note":      "Notiz",
+        "delete_item_appointment": "Termin",
+        "delete_item_reminder":  "Erinnerung",
+        "confirm_delete_title":  "{item} löschen bestätigen",
+        "field_name":            "Name",
+        "field_created":         "Erstellt",
+        "field_event":           "Ereignis",
+        "field_remind":          "Erinnern am",
+        "confirm_delete_warning": "Diese Aktion kann nicht rückgängig gemacht werden.",
+        "btn_cancel":            "Abbrechen",
+        "btn_delete":            "Löschen",
+        "listening_for_confirm": "Warte auf Sprachbestätigung...",
+        "unknown_command":      "Unbekannter Befehl: {name}",
+        "error":                "Fehler: {detail}",
+        "not_understood":       "Ich habe den Befehl nicht verstanden",
+        "delete_confirmations": (
+            "ja", "jep", "jo", "klar", "ok", "okay",
+            "bestätigen", "bestätigt", "mach es", "los", "weiter",
+            "löschen", "lösch es",
+        ),
+        "delete_rejections": (
+            "nein", "nope", "nö", "abbrechen", "stopp", "halt",
+            "nicht löschen", "behalten", "egal", "vergiss es",
+        ),
+
+        "system_prompt": (
+            "You are Writher, a voice assistant for productivity. "
+            "Current date and time: {now} ({weekday}). "
+            "The user speaks in {lang_name}. "
+            "Interpret their request and call the appropriate function. "
+            "When the user says relative times like 'morgen', 'in einer Stunde', "
+            "'nächsten Montag', convert them to absolute ISO datetimes. "
+            "Always respond by calling a function — never reply with plain text "
+            "unless no function fits."
+        ),
+        "lang_name": "German",
+
+        "show_notes":           "📝 Hier sind Ihre Notizen",
+        "show_appointments":    "📅 Hier ist Ihre Agenda",
+        "show_reminders":       "⏰ Hier sind Ihre Erinnerungen",
+        "assistant_error":      "Assistentenfehler",
+
+        "tray_idle":            "Writher — bereit",
+        "tray_recording":       "Writher — Aufnahme...",
+        "tray_ollama_down":     "Writher — Ollama nicht erreichbar",
+        "tray_notes_agenda":    "Notizen & Agenda",
+        "tray_quit":            "Beenden",
+
+        "no_notes":             "Keine Notizen",
+        "no_appointments":      "Keine Termine",
+        "no_reminders":         "Keine Erinnerungen",
+        "tab_notes":            "📝  Notizen",
+        "tab_agenda":           "📅  Agenda",
+        "tab_reminders":        "⏰  Erinnerungen",
+        "default_list_title":   "Liste",
+        "default_note_title":   "Notiz",
+
+        "reminder_toast_title":     "Writher Erinnerung",
+        "appointment_toast_title":  "Writher Termin",
+        "appointment_toast_body":   "📅 {title} — in {minutes} Min.",
+        "appointment_toast_now":    "📅 {title} — jetzt!",
+
+        "tray_settings":            "Einstellungen",
+
+        "settings_title":           "Einstellungen",
+        "setting_record_mode":      "Aufnahmemodus",
+        "setting_hold":             "Halten zum Aufnehmen",
+        "setting_toggle":           "Drücken zum Starten / Stoppen",
+        "setting_max_duration":     "Max. Aufnahmedauer (Sekunden)",
+        "setting_saved":            "Einstellungen gespeichert",
+        "setting_microphone":       "Mikrofon",
+        "setting_mic_default":      "Systemstandard",
+        "setting_ollama_model":     "Ollama-Modell",
+        "setting_ollama_url":       "Ollama-URL",
+        "setting_whisper_model":    "Whisper-Modell",
+        "setting_language":         "Sprache",
+        "setting_restart_required": "Neustart erforderlich",
+
+        "setting_hotkeys":          "Tastenkürzel",
+        "setting_hotkey_dictation": "Diktat",
+        "setting_hotkey_assistant": "Assistent",
+        "setting_hotkey_press":     "Taste drücken...",
+        "setting_hotkey_conflict":  "Bereits belegt",
+
+        "setting_log":              "Log",
     },
 }
 
