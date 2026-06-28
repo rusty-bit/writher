@@ -39,6 +39,7 @@ import ollama_manager
 from notifier import ReminderScheduler
 from notes_window import NotesWindow
 from settings_window import SettingsWindow
+from symbols import apply_symbols
 
 _pipeline_queue   = queue.Queue()
 _assistant_queue  = queue.Queue()
@@ -230,6 +231,7 @@ def _dictation_worker():
             log.info("Transcribing (dictation)...")
             text = transcriber.transcribe(item)
             if text:
+                text = apply_symbols(text)
                 log.info("Transcribed: %r", text)
                 inject(text)
             else:
@@ -548,9 +550,21 @@ def _destroy_root():
         pass
 
 
+def _acquire_instance_lock():
+    """Return a Win32 mutex handle if this is the first instance, else exit."""
+    import ctypes
+    mutex = ctypes.windll.kernel32.CreateMutexW(None, True, "Global\\WritHerSingleInstance")
+    if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+        log.error("Another instance of WritHer is already running. Exiting.")
+        raise SystemExit(1)
+    return mutex  # keep reference so it isn't garbage-collected
+
+
 def main():
     global transcriber, tray, widget, root, notes_win, settings_win, scheduler
     global hotkey_listener
+
+    _mutex = _acquire_instance_lock()
 
     db.init()
     _load_settings()
